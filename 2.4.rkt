@@ -11,8 +11,8 @@
 ;  (pop
 ;   (push empty-stack 1)))
 
-;constructors: empty-stack
+;constructors: empty-stack push pop
 
-;observers: push pop top empty-stack?
+;observers: top empty-stack?
 
 ;CPS?
