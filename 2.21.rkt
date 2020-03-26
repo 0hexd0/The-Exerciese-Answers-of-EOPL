@@ -1,35 +1,27 @@
 #lang racket
 (require eopl)
 
-(define empty-env
-  (lambda () '()))
-
-(define extend-env
-  (lambda (var val env)
-    (list env
-          (list var val))))
-
 (define-datatype environments environments?
-  (empty-env-exp)
-  (non-empty-env-exp
+  (empty-env)
+  (extend-env
    (old-env environments?)
-   (var-lst var-lst?)))
-
-(define-datatype var-lst var-lst?
-  (lst-exp
-   (var symbol?)))
+   (binded-pair pair?)))
 
 ;has-binding? : Env * Var -> Boolean
 (define has-binding?
   (lambda (exp search-var)
     (cases environments exp
-      (empty-env-exp () #f)
-      (non-empty-env-exp (old-env var-lst)
-                         (let ([saved-var (car var-lst)])
+      (empty-env () #f)
+      (extend-env (old-env binded-pair)
+                         (let ([saved-var (car binded-pair)])
                            (or (eqv? search-var saved-var)
                                (has-binding? old-env search-var)))))))
 
 (define test-env
-  (extend-env 'a 1 (empty-env)))
+  (extend-env
+   (extend-env (empty-env)
+               '(a 1))
+   '(b 2 )))
 
-(has-binding? '() 'a)
+(has-binding? test-env 'c)
+(has-binding? test-env 'a)
