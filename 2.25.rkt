@@ -17,12 +17,6 @@
                      (+ (leaf-sum left)
                         (leaf-sum right))))))
 
-(define get-key
-  (lambda (exp)
-    (cases bintree exp
-      (leaf-node (num) num)
-      (interior-node (key left right) key))))
-
 (define max-interior
   (lambda (exp)
     (cases bintree exp
@@ -34,8 +28,8 @@
                          ((and (> left-sum 0)
                               (> right-sum 0))
                          key)
-                         ((> right-sum left-sum) (get-key right))
-                         (else (get-key left))))))))
+                         ((> right-sum left-sum) (max-interior right))
+                         (else (max-interior left))))))))
 
 (define tree-1
   (interior-node 'foo (leaf-node 2) (leaf-node 3)))
