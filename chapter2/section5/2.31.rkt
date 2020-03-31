@@ -8,7 +8,7 @@
    (operand1 prefix-exp?)
    (operand2 prefix-exp?)))
 
-(define const-single
+(define parse-single
   (lambda (exp)
     (if (integer? exp)
         (const-exp exp)
@@ -26,7 +26,7 @@
                (not (eqv? next '-))
                (not (eqv? nnext '-)))
               (cons
-               (diff-exp (const-single next) (const-single nnext))
+               (diff-exp (parse-single next) (parse-single nnext))
                (replace (cdddr exp)))
               (cons cur (replace (cdr exp)))))
         exp)))
@@ -41,5 +41,7 @@
   (lambda (exp)
     (car (parser-inner exp))))
 
- (parser '(- - - - 5 6 3 4 - 3 4 ))
+(parser '(- - 3 2 - 4 - 12 7))
+(parser '(- - - - 5 6 3 4 - 3 4 ))
+
 
