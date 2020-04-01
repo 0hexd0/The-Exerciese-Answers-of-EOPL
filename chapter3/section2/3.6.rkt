@@ -67,7 +67,9 @@
   (let-exp
    (var identifier?)
    (exp1 expression?)
-   (body expression?)))
+   (body expression?))
+  (minus-exp
+   (const expression?)))
 
 (define value-of
   (lambda (exp env)
@@ -95,35 +97,59 @@
       (let-exp (var exp1 body)
                (let ([val1 (value-of exp1 env)])
                  (value-of body
-                           (extend-env var val1 env)))))))
+                           (extend-env var val1 env))))
+      (minus-exp (exp1)
+                 (num-val
+                  (- (expval->num (value-of exp1 env))))))))
 
 (define parse-single
   (lambda (exp)
     (cond
       ((integer? exp) (const-exp exp))
       ((identifier? exp) (var-exp exp))
+      ((pair? exp) (parser exp))
       (else exp))))
 
 (define replace
   (lambda (exp)
-    (if (and (pair? exp)
-             (> (length exp) 2))
-        (let ([cur (car exp)]
-              [next (cadr exp)]
-              [nnext (caddr exp)])
-          (if (and
-               (eqv? cur '-)
-               (not (eqv? next '-))
-               (not (eqv? nnext '-)))
-              (cons
-               (diff-exp (parse-single next) (parse-single nnext))
-               (replace (cdddr exp)))
-              (cons cur (replace (cdr exp)))))
-        exp)))
+    (if (pair? exp)
+        (cond
+          ((> (length exp) 2)
+           (let
+              ([cur (car exp)]
+               [next (cadr exp)]
+               [nnext (caddr exp)])
+             (cond
+               ((eqv? cur '-)
+                (if
+                  (and
+                   (not (eqv? next '-))
+                   (not (eqv? nnext '-)))
+                  (cons
+                   (diff-exp (parse-single next) (parse-single nnext))
+                   (replace (cdddr exp)))
+                  (cons cur (replace (cdr exp))))))))
+          ((> (length exp) 1)
+           (let
+              ([cur (car exp)]
+              [next (cadr exp)])
+             (cond
+               ((eqv? cur 'minus)
+                (if
+                  (not (eqv? next 'minus))
+                  (cons
+                   (minus-exp (parse-single next))
+                   (replace (cddr exp)))
+                  (cons cur (replace (cdr exp))))))))
+          (else
+           (cons (car exp) (replace (cdr exp)))))
+         exp)))
 
 (define parser-inner
   (lambda (exp)
-    (if (eqv? (car exp) '-)
+    (if (or
+         (eqv? (car exp) '-)
+         (eqv? (car exp) 'minus))
         (parser-inner (replace exp))
         exp)))
 
@@ -153,5 +179,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(- - i 1 - x v))
-;(expval->bool (bool-val #t))
+(run '(minus (- - (- i  (minus 1)) 1 (- x v))))
