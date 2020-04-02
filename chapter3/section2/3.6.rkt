@@ -183,4 +183,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(- 1))
+(run '(- 1 (minus 2)))
