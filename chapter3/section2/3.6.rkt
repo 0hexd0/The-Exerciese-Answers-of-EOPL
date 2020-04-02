@@ -110,46 +110,50 @@
       ((pair? exp) (parser exp))
       (else exp))))
 
+(define is-rator?
+  (lambda (exp)
+    (or
+     (eqv? exp '-)
+     (eqv? exp 'minus))))
+
 (define replace
   (lambda (exp)
     (if (pair? exp)
-        (cond
-          ((> (length exp) 2)
-           (let
-              ([cur (car exp)]
-               [next (cadr exp)]
-               [nnext (caddr exp)])
-             (cond
-               ((eqv? cur '-)
-                (if
+        (let ([cur (car exp)])
+          (cond
+            ((eqv? cur '-)
+             (if
+              (> (length exp) 2)
+              (let ([cur (car exp)]
+                    [next (cadr exp)]
+                    [nnext (caddr exp)])
+                 (if
                   (and
-                   (not (eqv? next '-))
-                   (not (eqv? nnext '-)))
+                   (not (is-rator? next))
+                   (not (is-rator? nnext)))
                   (cons
                    (diff-exp (parse-single next) (parse-single nnext))
                    (replace (cdddr exp)))
-                  (cons cur (replace (cdr exp))))))))
-          ((> (length exp) 1)
-           (let
-              ([cur (car exp)]
-              [next (cadr exp)])
-             (cond
-               ((eqv? cur 'minus)
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur 'minus)
+             (if
+              (> (length exp) 1)
+              (let ([cur (car exp)]
+                    [next (cadr exp)])
                 (if
-                  (not (eqv? next 'minus))
+                  (not (is-rator? next))
                   (cons
                    (minus-exp (parse-single next))
                    (replace (cddr exp)))
-                  (cons cur (replace (cdr exp))))))))
-          (else
-           (cons (car exp) (replace (cdr exp)))))
-         exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            (else exp)))
+        exp)))
 
 (define parser-inner
   (lambda (exp)
-    (if (or
-         (eqv? (car exp) '-)
-         (eqv? (car exp) 'minus))
+    (if (is-rator? (car exp))
         (parser-inner (replace exp))
         exp)))
 
@@ -179,4 +183,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(minus (- - (- i  (minus 1)) 1 (- x v))))
+(run '(- 1))
