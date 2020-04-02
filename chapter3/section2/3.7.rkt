@@ -148,7 +148,9 @@
      (eqv? exp '+)
      (eqv? exp '/)
      (eqv? exp 'minus)
-     (eqv? exp 'zero?))))
+     (eqv? exp 'if)
+     (eqv? exp 'zero?)
+     (eqv? exp 'let))))
 
 (define replace
   (lambda (exp)
@@ -167,6 +169,38 @@
                   (cons
                    (diff-exp (parse-single next) (parse-single nnext))
                    (replace (cdddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur 'if)
+             (if
+              (> (length exp) 3)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)]
+                    [nnnext (cadddr exp)])
+                 (if
+                  (and
+                   (not (is-rator? next))
+                   (not (is-rator? nnext))
+                   (not (is-rator? nnnext)))
+                  (cons
+                   (if-exp (parse-single next) (parse-single nnext) (parse-single nnnext))
+                   (replace (cddddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur 'let)
+             (if
+              (> (length exp) 3)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)]
+                    [nnnext (cadddr exp)])
+                 (if
+                  (and
+                   (identifier? next)
+                   (not (is-rator? nnext))
+                   (not (is-rator? nnnext)))
+                  (cons
+                   (let-exp next (parse-single nnext) (parse-single nnnext))
+                   (replace (cddddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
             ((eqv? cur '+)
@@ -269,8 +303,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(- (+ 3 2) - (/ 6 2) (* 2 1)))
-(run '(- + 3 2 - (/ 6 2) (* 2 1)))
-(run '(- + 3 2 - / 6 2 (* 2 1)))
-(run '(- + 3 2 - / 6 2 * 2 1))
-(run '(zero? (- 1 1)))
+(run '(zero? let a minus 1 + i a))
