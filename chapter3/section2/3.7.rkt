@@ -147,7 +147,8 @@
      (eqv? exp '*)
      (eqv? exp '+)
      (eqv? exp '/)
-     (eqv? exp 'minus))))
+     (eqv? exp 'minus)
+     (eqv? exp 'zero?))))
 
 (define replace
   (lambda (exp)
@@ -190,6 +191,17 @@
                   (not (is-rator? next))
                   (cons
                    (minus-exp (parse-single next))
+                   (replace (cddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur 'zero?)
+             (if
+              (> (length exp) 1)
+              (let ([next (cadr exp)])
+                (if
+                  (not (is-rator? next))
+                  (cons
+                   (zero?-exp (parse-single next))
                    (replace (cddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
@@ -261,3 +273,4 @@
 (run '(- + 3 2 - (/ 6 2) (* 2 1)))
 (run '(- + 3 2 - / 6 2 (* 2 1)))
 (run '(- + 3 2 - / 6 2 * 2 1))
+(run '(zero? (- 1 1)))
