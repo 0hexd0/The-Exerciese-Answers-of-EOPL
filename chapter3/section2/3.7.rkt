@@ -69,7 +69,16 @@
    (exp1 expression?)
    (body expression?))
   (minus-exp
-   (const expression?)))
+   (const expression?))
+  (addition-exp
+   (exp1 expression?)
+   (exp2 expression?))
+  (multi-exp
+   (exp1 expression?)
+   (exp2 expression?))
+  (quotient-exp
+   (exp1 expression?)
+   (exp2 expression?)))
 
 (define value-of
   (lambda (exp env)
@@ -100,7 +109,28 @@
                            (extend-env var val1 env))))
       (minus-exp (exp1)
                  (num-val
-                  (- (expval->num (value-of exp1 env))))))))
+                  (- (expval->num (value-of exp1 env)))))
+      (addition-exp (exp1 exp2)
+                (let ([val1 (value-of exp1 env)]
+                      [val2 (value-of exp2 env)])
+                  (let ([num1 (expval->num val1)]
+                        [num2 (expval->num val2)])
+                    (num-val
+                     (+ num1 num2)))))
+      (multi-exp (exp1 exp2)
+                (let ([val1 (value-of exp1 env)]
+                      [val2 (value-of exp2 env)])
+                  (let ([num1 (expval->num val1)]
+                        [num2 (expval->num val2)])
+                    (num-val
+                     (* num1 num2)))))
+      (quotient-exp (exp1 exp2)
+                (let ([val1 (value-of exp1 env)]
+                      [val2 (value-of exp2 env)])
+                  (let ([num1 (expval->num val1)]
+                        [num2 (expval->num val2)])
+                    (num-val
+                     (quotient num1 num2))))))))
 
 (define parse-single
   (lambda (exp)
@@ -114,6 +144,9 @@
   (lambda (exp)
     (or
      (eqv? exp '-)
+     (eqv? exp '*)
+     (eqv? exp '+)
+     (eqv? exp '/)
      (eqv? exp 'minus))))
 
 (define replace
@@ -124,8 +157,7 @@
             ((eqv? cur '-)
              (if
               (> (length exp) 2)
-              (let ([cur (car exp)]
-                    [next (cadr exp)]
+              (let ([next (cadr exp)]
                     [nnext (caddr exp)])
                  (if
                   (and
@@ -136,16 +168,57 @@
                    (replace (cdddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
+            ((eqv? cur '+)
+             (if
+              (> (length exp) 2)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)])
+                 (if
+                  (and
+                   (not (is-rator? next))
+                   (not (is-rator? nnext)))
+                  (cons
+                   (addition-exp (parse-single next) (parse-single nnext))
+                   (replace (cdddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
             ((eqv? cur 'minus)
              (if
               (> (length exp) 1)
-              (let ([cur (car exp)]
-                    [next (cadr exp)])
+              (let ([next (cadr exp)])
                 (if
                   (not (is-rator? next))
                   (cons
                    (minus-exp (parse-single next))
                    (replace (cddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur '*)
+             (if
+              (> (length exp) 2)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)])
+                (if
+                  (and
+                   (not (is-rator? next))
+                   (not (is-rator? nnext)))
+                  (cons
+                   (multi-exp (parse-single next) (parse-single nnext))
+                   (replace (cdddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
+            ((eqv? cur '/)
+             (if
+              (> (length exp) 2)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)])
+                (if
+                  (and
+                   (not (is-rator? next))
+                   (not (is-rator? nnext)))
+                  (cons
+                   (quotient-exp (parse-single next) (parse-single nnext))
+                   (replace (cdddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
             (else
@@ -184,4 +257,7 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(- 1 (minus 2)))
+(run '(- (+ 3 2) - (/ 6 2) (* 2 1)))
+(run '(- + 3 2 - (/ 6 2) (* 2 1)))
+(run '(- + 3 2 - / 6 2 (* 2 1)))
+(run '(- + 3 2 - / 6 2 * 2 1))
