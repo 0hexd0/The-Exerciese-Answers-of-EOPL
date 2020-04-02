@@ -61,6 +61,12 @@
   (equal?-exp
    (exp1 expression?)
    (exp2 expression?))
+  (greater?-exp
+   (exp1 expression?)
+   (exp2 expression?))
+  (less?-exp
+   (exp1 expression?)
+   (exp2 expression?))
   (if-exp
    (exp1 expression?)
    (exp2 expression?)
@@ -102,11 +108,27 @@
                          (bool-val #t)
                          (bool-val #f)))))
       (equal?-exp (exp1 exp2)
-              (let ([val1 (value-of exp1 env)]
-                    [val2 (value-of exp2 env)])
-                (let ([num1 (expval->num val1)]
-                      [num2 (expval->num val2)])
+                  (let ([val1 (value-of exp1 env)]
+                        [val2 (value-of exp2 env)])
+                  (let ([num1 (expval->num val1)]
+                        [num2 (expval->num val2)])
                   (if (= num1 num2)
+                      (bool-val #t)
+                      (bool-val #f)))))
+      (greater?-exp (exp1 exp2)
+                    (let ([val1 (value-of exp1 env)]
+                          [val2 (value-of exp2 env)])
+                      (let ([num1 (expval->num val1)]
+                            [num2 (expval->num val2)])
+                        (if (> num1 num2)
+                            (bool-val #t)
+                            (bool-val #f)))))
+      (less?-exp (exp1 exp2)
+                 (let ([val1 (value-of exp1 env)]
+                       [val2 (value-of exp2 env)])
+                   (let ([num1 (expval->num val1)]
+                         [num2 (expval->num val2)])
+                     (if (< num1 num2)
                          (bool-val #t)
                          (bool-val #f)))))
       (if-exp (exp1 exp2 exp3)
@@ -162,6 +184,8 @@
      (eqv? exp 'if)
      (eqv? exp 'zero?)
      (eqv? exp '=)
+     (eqv? exp '>)
+     (eqv? exp '<)
      (eqv? exp 'let))))
 
 (define none-rator?
@@ -224,6 +248,10 @@
               (eopl:error "illegal operation" exp)))
             ((eqv? cur '=)
              ((replace-factory '= 2 equal?-exp) exp))
+            ((eqv? cur '>)
+             ((replace-factory '> 2 greater?-exp) exp))
+            ((eqv? cur '<)
+             ((replace-factory '< 2 less?-exp) exp))
             ((eqv? cur '-)
              ((replace-factory '- 2 diff-exp) exp))
             ((eqv? cur 'if)
@@ -274,4 +302,6 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(zero? if = 1 - 0 1 + 1 1 (minus 3)))
+(run '(if > 2 1 2 1))
+(run '(if < 1 2 1 2))
+(run '(if = v 5 (minus v) x))
