@@ -62,6 +62,8 @@
   (emptylist-exp)
   (const-exp
    (num number?))
+  (list-exp
+   (exp1 list?))
   (diff-exp
    (exp1 expression?)
    (exp2 expression?))
@@ -182,7 +184,9 @@
                       [val2 (value-of exp2 env)])
                   (let ([lst (expval->list val2)])
                     (list-val
-                     (cons val1 lst))))))))
+                     (cons val1 lst)))))
+      (list-exp (exp1)
+                  (list-val (map (lambda (exp) (value-of exp env)) exp1))))))
 
 (define parse-single
   (lambda (exp)
@@ -207,7 +211,8 @@
      (eqv? exp '<)
      (eqv? exp 'let)
      (eqv? exp 'emptylist)
-     (eqv? exp 'cons))))
+     (eqv? exp 'cons)
+     (eqv? exp 'list))))
 
 (define none-rator?
   (lambda (lst n)
@@ -218,10 +223,17 @@
                         (- n 1))))))
 
 (define replace-factory
-  (lambda (sym oprand-num constructor)
+  (lambda (oprand-num constructor)
     (lambda (exp)
-      (if (> (length exp) oprand-num)
-          (if (none-rator? (cdr exp) oprand-num)
+      (if
+       (= -1 oprand-num)
+       (if (none-rator?
+            (cdr exp)
+            (length (cdr exp)))
+           (list (constructor (map parse-single (cdr exp))))
+           (cons (car exp) (replace (cdr exp))))
+       (if (> (length exp) oprand-num)
+           (if (none-rator? (cdr exp) oprand-num)
               (cond
                 ((= oprand-num 0)
                  (cons
@@ -248,7 +260,7 @@
                   (replace (cddddr exp))))
                 (else (eopl:error "too many oprands" exp)))
               (cons (car exp) (replace (cdr exp))))
-          (eopl:error "illegal operation" exp)))))
+           (eopl:error "illegal operation" exp))))))
 
 (define replace
   (lambda (exp)
@@ -271,30 +283,48 @@
                    (replace (cddddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
+            ((eqv? cur 'let)
+             (if
+              (> (length exp) 3)
+              (let ([next (cadr exp)]
+                    [nnext (caddr exp)]
+                    [nnnext (cadddr exp)])
+                 (if
+                  (and
+                   (identifier? next)
+                   (not (is-rator? nnext))
+                   (not (is-rator? nnnext)))
+                  (cons
+                   (let-exp next (parse-single nnext) (parse-single nnnext))
+                   (replace (cddddr exp)))
+                  (cons cur (replace (cdr exp)))))
+              (eopl:error "illegal operation" exp)))
             ((eqv? cur '=)
-             ((replace-factory '= 2 equal?-exp) exp))
+             ((replace-factory 2 equal?-exp) exp))
             ((eqv? cur '>)
-             ((replace-factory '> 2 greater?-exp) exp))
+             ((replace-factory 2 greater?-exp) exp))
             ((eqv? cur '<)
-             ((replace-factory '< 2 less?-exp) exp))
+             ((replace-factory 2 less?-exp) exp))
             ((eqv? cur '-)
-             ((replace-factory '- 2 diff-exp) exp))
+             ((replace-factory 2 diff-exp) exp))
             ((eqv? cur 'if)
-             ((replace-factory 'if 3 if-exp) exp))
+             ((replace-factory 3 if-exp) exp))
             ((eqv? cur '+)
-             ((replace-factory '+ 2 addition-exp) exp))
+             ((replace-factory 2 addition-exp) exp))
             ((eqv? cur 'minus)
-             ((replace-factory 'minus 1 minus-exp) exp))
+             ((replace-factory 1 minus-exp) exp))
             ((eqv? cur 'zero?)
-             ((replace-factory 'zero? 1 zero?-exp) exp))
+             ((replace-factory 1 zero?-exp) exp))
             ((eqv? cur '*)
-             ((replace-factory '* 2 multi-exp) exp))
+             ((replace-factory 2 multi-exp) exp))
             ((eqv? cur '/)
-             ((replace-factory '/ 2 quotient-exp) exp))
+             ((replace-factory 2 quotient-exp) exp))
             ((eqv? cur 'emptylist)
-             ((replace-factory 'emptylist 0 emptylist-exp) exp))
+             ((replace-factory 0 emptylist-exp) exp))
             ((eqv? cur 'cons)
-             ((replace-factory 'cons 2 cons-exp) exp))
+             ((replace-factory 2 cons-exp) exp))
+            ((eqv? cur 'list)
+             ((replace-factory -1 list-exp) exp))
             (else
              (cons cur (replace (cdr exp))))))
         exp)))
@@ -331,4 +361,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(let x 4 cons x cons cons - x 1 emptylist emptylist))
+(run '(let x 4 list x - x 1 - x 3))
