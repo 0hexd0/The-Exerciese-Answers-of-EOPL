@@ -316,22 +316,6 @@
                    (replace (cddddr exp)))
                   (cons cur (replace (cdr exp)))))
               (eopl:error "illegal operation" exp)))
-            ((eqv? cur 'let)
-             (if
-              (> (length exp) 3)
-              (let ([next (cadr exp)]
-                    [nnext (caddr exp)]
-                    [nnnext (cadddr exp)])
-                 (if
-                  (and
-                   (identifier? next)
-                   (not (is-rator? nnext))
-                   (not (is-rator? nnnext)))
-                  (cons
-                   (let-exp next (parse-single nnext) (parse-single nnnext))
-                   (replace (cddddr exp)))
-                  (cons cur (replace (cdr exp)))))
-              (eopl:error "illegal operation" exp)))
             ((eqv? cur '=)
              ((replace-factory 2 equal?-exp) exp))
             ((eqv? cur '>)
