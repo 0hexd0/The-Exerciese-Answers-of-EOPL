@@ -7,7 +7,6 @@
         #f
         (symbol? id))))
 
-
 (define-datatype proc proc?
   (procedure
    (var identifier?)
@@ -168,6 +167,11 @@
   (proc-exp
    (var identifier?)
    (body expression?))
+  (let-proc-exp
+   (var1 identifier?)
+   (var2 identifier?)
+   (body1 expression?)
+   (body2 expression?))
   (call-exp
    (rator expression?)
    (rand expression?)))
@@ -281,6 +285,13 @@
       (proc-exp (var body)
                 (proc-val
                  (procedure var body env)))
+
+      (let-proc-exp (var1 var2 body1 body2)
+               (value-of body2
+                         (extend-env var1
+                                     (proc-val
+                                      (procedure var2 body1 env))
+                                     env)))
       
       (call-exp (rator rand)
                 (let ([proc (expval->proc (value-of rator env))]
@@ -331,7 +342,8 @@
      (eqv? exp 'cond)
      (eqv? exp 'unpack)
      (eqv? exp 'call)
-     (eqv? exp 'proc))))
+     (eqv? exp 'proc)
+     (eqv? exp 'let-proc))))
 
 (define is-not-rator?
   (lambda (exp)
@@ -502,6 +514,22 @@
                  (proc-exp (cadr exp) (parse-single (caddr exp)))
                  (replace (cdddr exp)))
               (cons cur (cons (cadr exp) (replace (cddr exp))))))
+            ((eqv? cur 'let-proc)
+             (let ([var1 (cadr exp)]
+                   [var2 (caddr exp)]
+                   [body1 (cadddr exp)]
+                   [body2 (car (cddddr exp))])
+               (if
+                (and (identifier? var1)
+                     (identifier? var2)
+                     (is-not-rator? body1)
+                     (is-not-rator? body2))
+              (cons
+                 (let-proc-exp var1 var2 (parse-single body1) (parse-single body2))
+                 (replace (cdr (cddddr exp))))
+              (cons cur
+                    (cons var1
+                          (cons var2 (replace (cdddr exp))))))))
             (else
              (cons cur (replace (cdr exp))))))
         exp)))
@@ -550,4 +578,4 @@
        'x (num-val 10)
        (empty-env))))))
 
-(run '(let x 200 let f proc z - z x  let x 100 let g  proc z - z x  - call f 1 call g 1))
+(run '(let-proc a x - x 1 + call a 200 1))
